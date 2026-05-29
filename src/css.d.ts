@@ -5,3 +5,8 @@
 declare module '*.css'
 declare module '*.scss'
 declare module '*.sass'
+
+// The Payload-generated routes import this CSS bundle via a package subpath
+// (`@payloadcms/next/css`). The specifier has no `.css` suffix, so the wildcard
+// declarations above don't cover it; declare it explicitly.
+declare module '@payloadcms/next/css'
