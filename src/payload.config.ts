@@ -7,9 +7,29 @@ import { fileURLToPath } from 'url'
 import { CloudflareContext, getCloudflareContext } from '@opennextjs/cloudflare'
 import { GetPlatformProxyOptions } from 'wrangler'
 import { r2Storage } from '@payloadcms/storage-r2'
+import { seoPlugin } from '@payloadcms/plugin-seo'
+import type { GenerateTitle, GenerateDescription, GenerateURL } from '@payloadcms/plugin-seo/types'
 
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
+import { Posts } from './collections/Posts'
+import { Categories } from './collections/Categories'
+
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://gerustpunt.nl'
+
+type Doc = { title?: string; excerpt?: string; slug?: string }
+
+const generateTitle: GenerateTitle<Doc> = ({ doc }) =>
+  doc?.title ? `${doc.title} · Gerustpunt` : 'Gerustpunt'
+
+const generateDescription: GenerateDescription<Doc> = ({ doc }) => doc?.excerpt ?? ''
+
+const generateURL: GenerateURL<Doc> = ({ doc, collectionSlug }) => {
+  if (!doc?.slug) return FRONTEND_URL
+  if (collectionSlug === 'posts') return `${FRONTEND_URL}/blog/${doc.slug}`
+  if (collectionSlug === 'categories') return `${FRONTEND_URL}/blog/categorie/${doc.slug}`
+  return FRONTEND_URL
+}
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -49,10 +69,17 @@ export default buildConfig({
     importMap: {
       baseDir: path.resolve(dirname),
     },
+    meta: {
+      titleSuffix: ' · Gerustpunt CMS',
+    },
   },
-  collections: [Users, Media],
+  collections: [Users, Media, Posts, Categories],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
+  // Frontend lives on gerustpunt.nl and talks to this CMS cross-origin for
+  // preview + revalidation. Localhost is whitelisted for dev.
+  cors: [FRONTEND_URL, 'http://localhost:3000', 'http://127.0.0.1:3000'],
+  csrf: [FRONTEND_URL, 'http://localhost:3000', 'http://127.0.0.1:3000'],
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
@@ -62,6 +89,14 @@ export default buildConfig({
     r2Storage({
       bucket: cloudflare.env.R2,
       collections: { media: true },
+    }),
+    seoPlugin({
+      collections: ['posts', 'categories'],
+      uploadsCollection: 'media',
+      generateTitle,
+      generateDescription,
+      generateURL,
+      tabbedUI: true,
     }),
   ],
 })
