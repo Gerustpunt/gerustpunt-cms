@@ -69,8 +69,9 @@ export interface Config {
   collections: {
     users: User;
     media: Media;
-    posts: Post;
     categories: Category;
+    authors: Author;
+    posts: Post;
     'payload-kv': PayloadKv;
     'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
@@ -81,8 +82,9 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
-    posts: PostsSelect<false> | PostsSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
+    authors: AuthorsSelect<false> | AuthorsSelect<true>;
+    posts: PostsSelect<false> | PostsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -172,6 +174,56 @@ export interface Media {
   height?: number | null;
 }
 /**
+ * High-level topics. Each post belongs to one. Keep this list short (5–8 max) — too many categories dilutes topic authority for SEO.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "categories".
+ */
+export interface Category {
+  id: number;
+  title: string;
+  /**
+   * One sentence — used on the category archive page and as meta description.
+   */
+  description?: string | null;
+  /**
+   * URL path — auto-generated from the title, but you can edit it. Use lowercase, dashes, no spaces.
+   */
+  slug: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Bylines on blog posts. Helps with E-E-A-T (Experience, Expertise, Authoritativeness, Trust) for Google.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "authors".
+ */
+export interface Author {
+  id: number;
+  name: string;
+  /**
+   * URL path — auto-generated from the title, but you can edit it. Use lowercase, dashes, no spaces.
+   */
+  slug: string;
+  /**
+   * Bijv. "Exposurecoach", "Gerustpunt team"
+   */
+  role?: string | null;
+  /**
+   * Korte bio onder elke post.
+   */
+  bio?: string | null;
+  avatar?: (number | null) | Media;
+  social?: {
+    twitter?: string | null;
+    linkedin?: string | null;
+    website?: string | null;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * Blog posts. Drafts autosave; click "Publish" to make them live on gerustpunt.nl.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -180,21 +232,21 @@ export interface Media {
 export interface Post {
   id: number;
   /**
-   * Main title. Also used as default meta title. Keep under ~60 characters.
+   * De hoofdtitel — ook gebruikt als default meta title. Houd 'm onder ~60 tekens voor volledige weergave in Google.
    */
   title: string;
   /**
-   * Korte samenvatting (≤ 220 tekens). Gebruikt in listing en als fallback meta description.
+   * Korte samenvatting in de listing, RSS, en als fallback meta description. 140–160 tekens werkt het beste in zoekresultaten.
    */
   excerpt: string;
   /**
-   * Hero image bovenaan + fallback Open Graph image. ≥ 1600×900.
+   * Bovenaan de post EN als default Open Graph / Twitter card image. Mik op 1600×900 of groter.
    */
-  coverImage: number | Media;
+  heroImage: number | Media;
   /**
-   * De body. Gebruik H2/H3 voor sectie-kopjes — die laat Google soms in rich results zien.
+   * De body. Gebruik H2/H3 voor secties — die laat Google soms in rich results zien. Link naar gerelateerde Gerustpunt-pagina's waar zinvol.
    */
-  content: {
+  body: {
     root: {
       type: string;
       children: {
@@ -209,8 +261,50 @@ export interface Post {
     };
     [k: string]: unknown;
   };
-  categories?: (number | Category)[] | null;
-  author?: (number | null) | User;
+  /**
+   * Bylines. De meeste posts hebben één auteur.
+   */
+  authors: (number | Author)[];
+  category: number | Category;
+  /**
+   * Vrije keywords. Voor related-posts en topic clusters.
+   */
+  tags?:
+    | {
+        tag: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Handmatig gekozen gerelateerde posts. Onderaan de post getoond — vermindert bounce rate en versterkt topic clusters voor SEO.
+   */
+  relatedPosts?: (number | Post)[] | null;
+  /**
+   * Het primaire keyword waar je deze post mee wil ranken. Niet gepubliceerd — alleen schrijfgids.
+   */
+  focusKeyword?: string | null;
+  /**
+   * Leeg laten voor default. Alleen invullen als de canonical URL ergens anders naar moet wijzen.
+   */
+  canonicalOverride?: string | null;
+  /**
+   * Verberg deze post voor Google en andere zoekmachines.
+   */
+  noindex?: boolean | null;
+  /**
+   * Vertelt Google wat voor content dit is. HowTo en FAQPage geven speciale rich results.
+   */
+  schemaType?: ('BlogPosting' | 'NewsArticle' | 'HowTo' | 'FAQPage' | 'Article') | null;
+  /**
+   * Q&A paren als FAQPage structured data — Google toont ze soms direct in zoekresultaten.
+   */
+  faqs?:
+    | {
+        question: string;
+        answer: string;
+        id?: string | null;
+      }[]
+    | null;
   meta?: {
     title?: string | null;
     description?: string | null;
@@ -218,41 +312,26 @@ export interface Post {
      * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
      */
     image?: (number | null) | Media;
+    /**
+     * Optioneel. Eigen afbeelding voor social shares. Leeg = hero image gebruiken.
+     */
+    ogImage?: (number | null) | Media;
+    /**
+     * Optioneel. Twitter @handle voor Twitter card attributie.
+     */
+    twitterCreator?: string | null;
   };
   /**
-   * URL-fragment. Wordt automatisch van de titel gemaakt.
+   * URL path — auto-generated from the title, but you can edit it. Use lowercase, dashes, no spaces.
    */
   slug: string;
   /**
-   * Datum die in de listing en sitemap verschijnt. Leeg = "vandaag" bij publish.
+   * Datum die op de post verschijnt. Leeg = "vandaag" bij eerste publish. Update bij grote herschrijving — Google waardeert versheid.
    */
   publishedAt?: string | null;
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "categories".
- */
-export interface Category {
-  id: number;
-  title: string;
-  /**
-   * URL fragment. Auto-generated from the title if left empty.
-   */
-  slug: string;
-  description?: string | null;
-  meta?: {
-    title?: string | null;
-    description?: string | null;
-    /**
-     * Maximum upload file size: 12MB. Recommended file size for images is <500KB.
-     */
-    image?: (number | null) | Media;
-  };
-  updatedAt: string;
-  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -379,12 +458,16 @@ export interface PayloadLockedDocument {
         value: number | Media;
       } | null)
     | ({
-        relationTo: 'posts';
-        value: number | Post;
-      } | null)
-    | ({
         relationTo: 'categories';
         value: number | Category;
+      } | null)
+    | ({
+        relationTo: 'authors';
+        value: number | Author;
+      } | null)
+    | ({
+        relationTo: 'posts';
+        value: number | Post;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -468,45 +551,78 @@ export interface MediaSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "categories_select".
+ */
+export interface CategoriesSelect<T extends boolean = true> {
+  title?: T;
+  description?: T;
+  slug?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "authors_select".
+ */
+export interface AuthorsSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  role?: T;
+  bio?: T;
+  avatar?: T;
+  social?:
+    | T
+    | {
+        twitter?: T;
+        linkedin?: T;
+        website?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "posts_select".
  */
 export interface PostsSelect<T extends boolean = true> {
   title?: T;
   excerpt?: T;
-  coverImage?: T;
-  content?: T;
-  categories?: T;
-  author?: T;
+  heroImage?: T;
+  body?: T;
+  authors?: T;
+  category?: T;
+  tags?:
+    | T
+    | {
+        tag?: T;
+        id?: T;
+      };
+  relatedPosts?: T;
+  focusKeyword?: T;
+  canonicalOverride?: T;
+  noindex?: T;
+  schemaType?: T;
+  faqs?:
+    | T
+    | {
+        question?: T;
+        answer?: T;
+        id?: T;
+      };
   meta?:
     | T
     | {
         title?: T;
         description?: T;
         image?: T;
+        ogImage?: T;
+        twitterCreator?: T;
       };
   slug?: T;
   publishedAt?: T;
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "categories_select".
- */
-export interface CategoriesSelect<T extends boolean = true> {
-  title?: T;
-  slug?: T;
-  description?: T;
-  meta?:
-    | T
-    | {
-        title?: T;
-        description?: T;
-        image?: T;
-      };
-  updatedAt?: T;
-  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

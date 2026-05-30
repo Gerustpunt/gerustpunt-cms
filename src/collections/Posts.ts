@@ -1,15 +1,16 @@
 import type { CollectionConfig } from 'payload'
-import { slugify } from '../utils/slug'
+import { publishedOrAuthenticated, authenticated } from '../access'
+import { slugField } from '../fields/slug'
 import { revalidatePost, revalidatePostAfterDelete } from '../hooks/revalidatePost'
 
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://gerustpunt.nl'
+const FRONTEND_URL = 'https://gerustpunt.nl'
 
 export const Posts: CollectionConfig = {
   slug: 'posts',
   labels: { singular: 'Post', plural: 'Posts' },
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['title', 'slug', 'publishedAt', 'updatedAt', '_status'],
+    defaultColumns: ['title', 'authors', 'category', 'publishedAt', '_status'],
     group: 'Blog',
     description:
       'Blog posts. Drafts autosave; click "Publish" to make them live on gerustpunt.nl.',
@@ -26,13 +27,10 @@ export const Posts: CollectionConfig = {
       `${FRONTEND_URL}/api/preview?secret=${process.env.PREVIEW_SECRET || ''}&slug=${(doc as { slug?: string })?.slug || ''}`,
   },
   access: {
-    read: ({ req: { user } }) => {
-      if (user) return true
-      return { _status: { equals: 'published' } }
-    },
-    create: ({ req: { user } }) => !!user,
-    update: ({ req: { user } }) => !!user,
-    delete: ({ req: { user } }) => !!user,
+    read: publishedOrAuthenticated,
+    create: authenticated,
+    update: authenticated,
+    delete: authenticated,
   },
   versions: {
     drafts: {
@@ -54,9 +52,7 @@ export const Posts: CollectionConfig = {
     afterDelete: [revalidatePostAfterDelete],
   },
   fields: [
-    // Tabs container — the SEO plugin appends its own "SEO" tab at the end
-    // (because `tabbedUI: true` in payload.config). Sidebar fields stay
-    // outside the tabs.
+    // ─── Main content tab ──────────────────────────────────────────────
     {
       type: 'tabs',
       tabs: [
@@ -70,89 +66,154 @@ export const Posts: CollectionConfig = {
               maxLength: 140,
               admin: {
                 description:
-                  'Main title. Also used as default meta title. Keep under ~60 characters.',
+                  "De hoofdtitel — ook gebruikt als default meta title. Houd 'm onder ~60 tekens voor volledige weergave in Google.",
               },
             },
             {
               name: 'excerpt',
               type: 'textarea',
               required: true,
-              maxLength: 220,
+              maxLength: 280,
               admin: {
                 description:
-                  'Korte samenvatting (≤ 220 tekens). Gebruikt in listing en als fallback meta description.',
+                  'Korte samenvatting in de listing, RSS, en als fallback meta description. 140–160 tekens werkt het beste in zoekresultaten.',
               },
             },
             {
-              name: 'coverImage',
+              name: 'heroImage',
               type: 'upload',
               relationTo: 'media',
               required: true,
               admin: {
-                description: 'Hero image bovenaan + fallback Open Graph image. ≥ 1600×900.',
+                description:
+                  'Bovenaan de post EN als default Open Graph / Twitter card image. Mik op 1600×900 of groter.',
               },
             },
             {
-              name: 'content',
+              name: 'body',
               type: 'richText',
               required: true,
               admin: {
                 description:
-                  'De body. Gebruik H2/H3 voor sectie-kopjes — die laat Google soms in rich results zien.',
+                  'De body. Gebruik H2/H3 voor secties — die laat Google soms in rich results zien. Link naar gerelateerde Gerustpunt-pagina\'s waar zinvol.',
               },
             },
           ],
         },
+        // ─── Meta / classification ───────────────────────────────────────
         {
           label: 'Classification',
           fields: [
             {
-              name: 'categories',
+              name: 'authors',
               type: 'relationship',
-              relationTo: 'categories',
+              relationTo: 'authors',
               hasMany: true,
+              required: true,
+              admin: {
+                description: 'Bylines. De meeste posts hebben één auteur.',
+              },
             },
             {
-              name: 'author',
+              name: 'category',
               type: 'relationship',
-              relationTo: 'users',
-              required: false,
+              relationTo: 'categories',
+              required: true,
+            },
+            {
+              name: 'tags',
+              type: 'array',
+              labels: { singular: 'Tag', plural: 'Tags' },
+              admin: {
+                description: 'Vrije keywords. Voor related-posts en topic clusters.',
+              },
+              fields: [{ name: 'tag', type: 'text', required: true }],
+            },
+            {
+              name: 'relatedPosts',
+              type: 'relationship',
+              relationTo: 'posts',
+              hasMany: true,
+              filterOptions: ({ id }) => ({ id: { not_equals: id } }),
+              admin: {
+                description:
+                  'Handmatig gekozen gerelateerde posts. Onderaan de post getoond — vermindert bounce rate en versterkt topic clusters voor SEO.',
+              },
+            },
+          ],
+        },
+        // ─── Advanced SEO (beyond what the SEO plugin handles) ──────────
+        {
+          label: 'Advanced SEO',
+          fields: [
+            {
+              name: 'focusKeyword',
+              type: 'text',
+              admin: {
+                description:
+                  'Het primaire keyword waar je deze post mee wil ranken. Niet gepubliceerd — alleen schrijfgids.',
+              },
+            },
+            {
+              name: 'canonicalOverride',
+              type: 'text',
+              admin: {
+                description:
+                  'Leeg laten voor default. Alleen invullen als de canonical URL ergens anders naar moet wijzen.',
+              },
+            },
+            {
+              name: 'noindex',
+              type: 'checkbox',
+              defaultValue: false,
+              admin: {
+                description:
+                  'Verberg deze post voor Google en andere zoekmachines.',
+              },
+            },
+            {
+              name: 'schemaType',
+              type: 'select',
+              defaultValue: 'BlogPosting',
+              options: [
+                { label: 'Blog post (default)', value: 'BlogPosting' },
+                { label: 'News article', value: 'NewsArticle' },
+                { label: 'How-to guide', value: 'HowTo' },
+                { label: 'FAQ page', value: 'FAQPage' },
+                { label: 'Generic article', value: 'Article' },
+              ],
+              admin: {
+                description:
+                  'Vertelt Google wat voor content dit is. HowTo en FAQPage geven speciale rich results.',
+              },
+            },
+            {
+              name: 'faqs',
+              type: 'array',
+              admin: {
+                condition: (data) => data?.schemaType === 'FAQPage',
+                description:
+                  'Q&A paren als FAQPage structured data — Google toont ze soms direct in zoekresultaten.',
+              },
+              fields: [
+                { name: 'question', type: 'text', required: true },
+                { name: 'answer', type: 'textarea', required: true },
+              ],
             },
           ],
         },
       ],
     },
-    // Sidebar fields
-    {
-      name: 'slug',
-      type: 'text',
-      required: true,
-      unique: true,
-      index: true,
-      admin: {
-        position: 'sidebar',
-        description: 'URL-fragment. Wordt automatisch van de titel gemaakt.',
-      },
-      hooks: {
-        beforeValidate: [
-          ({ value, data, operation }) => {
-            if (typeof value === 'string' && value.length > 0) return slugify(value)
-            if (operation === 'create' || !value) {
-              const source = (data as { title?: string })?.title
-              if (source) return slugify(source)
-            }
-            return value
-          },
-        ],
-      },
-    },
+    // ─── Sidebar ──────────────────────────────────────────────────────
+    slugField('title'),
     {
       name: 'publishedAt',
       type: 'date',
       admin: {
         position: 'sidebar',
         date: { pickerAppearance: 'dayAndTime' },
-        description: 'Datum die in de listing en sitemap verschijnt. Leeg = "vandaag" bij publish.',
+        description:
+          'Datum die op de post verschijnt. Leeg = "vandaag" bij eerste publish. Update bij grote herschrijving — Google waardeert versheid.',
       },
     },
   ],

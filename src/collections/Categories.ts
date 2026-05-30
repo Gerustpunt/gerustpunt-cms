@@ -1,15 +1,21 @@
 import type { CollectionConfig } from 'payload'
-import { slugify } from '../utils/slug'
+import { anyone, authenticated } from '../access'
+import { slugField } from '../fields/slug'
 
 export const Categories: CollectionConfig = {
   slug: 'categories',
   admin: {
     useAsTitle: 'title',
-    defaultColumns: ['title', 'slug', 'updatedAt'],
+    defaultColumns: ['title', 'slug'],
     group: 'Blog',
+    description:
+      'High-level topics. Each post belongs to one. Keep this list short (5–8 max) — too many categories dilutes topic authority for SEO.',
   },
   access: {
-    read: () => true,
+    read: anyone,
+    create: authenticated,
+    update: authenticated,
+    delete: authenticated,
   },
   fields: [
     {
@@ -18,28 +24,12 @@ export const Categories: CollectionConfig = {
       required: true,
     },
     {
-      name: 'slug',
-      type: 'text',
-      required: true,
-      unique: true,
-      index: true,
-      admin: {
-        description: 'URL fragment. Auto-generated from the title if left empty.',
-      },
-      hooks: {
-        beforeValidate: [
-          ({ value, data }) => {
-            if (value) return slugify(value)
-            if (data?.title) return slugify(data.title)
-            return value
-          },
-        ],
-      },
-    },
-    {
       name: 'description',
       type: 'textarea',
-      maxLength: 200,
+      admin: {
+        description: 'One sentence — used on the category archive page and as meta description.',
+      },
     },
+    slugField('title'),
   ],
 }

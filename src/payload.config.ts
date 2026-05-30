@@ -14,8 +14,9 @@ import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { Posts } from './collections/Posts'
 import { Categories } from './collections/Categories'
+import { Authors } from './collections/Authors'
 
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://gerustpunt.nl'
+const FRONTEND_URL = 'https://gerustpunt.nl'
 
 type Doc = { title?: string; excerpt?: string; slug?: string }
 
@@ -73,7 +74,7 @@ export default buildConfig({
       titleSuffix: ' · Gerustpunt CMS',
     },
   },
-  collections: [Users, Media, Posts, Categories],
+  collections: [Users, Media, Categories, Authors, Posts],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   // Frontend lives on gerustpunt.nl and talks to this CMS cross-origin for
@@ -91,12 +92,32 @@ export default buildConfig({
       collections: { media: true },
     }),
     seoPlugin({
-      collections: ['posts', 'categories'],
+      collections: ['posts'],
       uploadsCollection: 'media',
       generateTitle,
       generateDescription,
       generateURL,
       tabbedUI: true,
+      fields: ({ defaultFields }) => [
+        ...defaultFields,
+        // Custom OG image override. Otherwise the post's heroImage is used.
+        {
+          name: 'ogImage',
+          type: 'upload',
+          relationTo: 'media',
+          admin: {
+            description:
+              'Optioneel. Eigen afbeelding voor social shares. Leeg = hero image gebruiken.',
+          },
+        },
+        {
+          name: 'twitterCreator',
+          type: 'text',
+          admin: {
+            description: 'Optioneel. Twitter @handle voor Twitter card attributie.',
+          },
+        },
+      ],
     }),
   ],
 })

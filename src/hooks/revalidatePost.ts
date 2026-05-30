@@ -2,6 +2,8 @@ import type { CollectionAfterChangeHook, CollectionAfterDeleteHook } from 'paylo
 
 type Doc = { slug?: string }
 
+const FRONTEND_URL = 'https://gerustpunt.nl'
+
 /**
  * Pings the frontend's `/api/revalidate` route so Next.js evicts the cached
  * tag for this post and the listing. Runs on publish + delete.
@@ -11,15 +13,14 @@ type Doc = { slug?: string }
  * blocks the CMS save.
  */
 async function ping(slug?: string) {
-  const url = process.env.FRONTEND_URL
   const secret = process.env.PREVIEW_SECRET
-  if (!url || !secret) return
+  if (!secret) return
 
   const params = new URLSearchParams({ secret })
   if (slug) params.set('slug', slug)
 
   try {
-    await fetch(`${url}/api/revalidate?${params.toString()}`, {
+    await fetch(`${FRONTEND_URL}/api/revalidate?${params.toString()}`, {
       method: 'POST',
       // Don't hold up the request; the CMS doesn't need a response body.
       keepalive: true,
