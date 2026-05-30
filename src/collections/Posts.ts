@@ -5,6 +5,10 @@ import { revalidatePost, revalidatePostAfterDelete } from '../hooks/revalidatePo
 
 const FRONTEND_URL = 'https://gerustpunt.nl'
 
+// Shared with frontend's /api/preview route. Keep in sync with the value in
+// src/hooks/revalidatePost.ts and the frontend api/preview + api/revalidate.
+const PREVIEW_SECRET = 'e9c6df35d9c267c9df50bd5425cd47eb0774b0019d3c65e1'
+
 export const Posts: CollectionConfig = {
   slug: 'posts',
   labels: { singular: 'Post', plural: 'Posts' },
@@ -16,7 +20,7 @@ export const Posts: CollectionConfig = {
       'Blog posts. Drafts autosave; click "Publish" to make them live on gerustpunt.nl.',
     livePreview: {
       url: ({ data }) =>
-        `${FRONTEND_URL}/api/preview?secret=${process.env.PREVIEW_SECRET || ''}&slug=${(data as { slug?: string })?.slug || ''}`,
+        `${FRONTEND_URL}/api/preview?secret=${PREVIEW_SECRET}&slug=${(data as { slug?: string })?.slug || ''}`,
       breakpoints: [
         { name: 'mobile', label: 'Mobile', width: 375, height: 667 },
         { name: 'tablet', label: 'Tablet', width: 768, height: 1024 },
@@ -24,7 +28,7 @@ export const Posts: CollectionConfig = {
       ],
     },
     preview: (doc) =>
-      `${FRONTEND_URL}/api/preview?secret=${process.env.PREVIEW_SECRET || ''}&slug=${(doc as { slug?: string })?.slug || ''}`,
+      `${FRONTEND_URL}/api/preview?secret=${PREVIEW_SECRET}&slug=${(doc as { slug?: string })?.slug || ''}`,
   },
   access: {
     read: publishedOrAuthenticated,

@@ -4,19 +4,18 @@ type Doc = { slug?: string }
 
 const FRONTEND_URL = 'https://gerustpunt.nl'
 
+// Shared secret with the frontend's /api/preview + /api/revalidate routes.
+// Hardcoded on both sides to avoid env-var drift across deploys. Rotate by
+// updating it in both repos and redeploying both.
+const PREVIEW_SECRET = 'e9c6df35d9c267c9df50bd5425cd47eb0774b0019d3c65e1'
+
 /**
  * Pings the frontend's `/api/revalidate` route so Next.js evicts the cached
- * tag for this post and the listing. Runs on publish + delete.
- *
- * The endpoint is authenticated via `PREVIEW_SECRET` — both apps need the
- * same secret in their env. Failure to revalidate is logged but never
- * blocks the CMS save.
+ * tag for this post and the listing. Runs on publish + delete. Failure to
+ * revalidate is logged but never blocks the CMS save.
  */
 async function ping(slug?: string) {
-  const secret = process.env.PREVIEW_SECRET
-  if (!secret) return
-
-  const params = new URLSearchParams({ secret })
+  const params = new URLSearchParams({ secret: PREVIEW_SECRET })
   if (slug) params.set('slug', slug)
 
   try {
