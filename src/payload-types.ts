@@ -172,27 +172,28 @@ export interface Media {
   height?: number | null;
 }
 /**
+ * Blog posts. Drafts autosave; click "Publish" to make them live on gerustpunt.nl.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "posts".
  */
 export interface Post {
   id: number;
+  /**
+   * Main title. Also used as default meta title. Keep under ~60 characters.
+   */
   title: string;
   /**
-   * URL-fragment. Wordt automatisch van de titel gemaakt.
-   */
-  slug: string;
-  /**
-   * Wordt gebruikt als datum in de listing en sitemap.
-   */
-  publishedAt: string;
-  /**
-   * Korte samenvatting (≤ 220 tekens) voor de listing en social previews.
+   * Korte samenvatting (≤ 220 tekens). Gebruikt in listing en als fallback meta description.
    */
   excerpt: string;
+  /**
+   * Hero image bovenaan + fallback Open Graph image. ≥ 1600×900.
+   */
   coverImage: number | Media;
-  categories?: (number | Category)[] | null;
-  author?: (number | null) | User;
+  /**
+   * De body. Gebruik H2/H3 voor sectie-kopjes — die laat Google soms in rich results zien.
+   */
   content: {
     root: {
       type: string;
@@ -208,6 +209,8 @@ export interface Post {
     };
     [k: string]: unknown;
   };
+  categories?: (number | Category)[] | null;
+  author?: (number | null) | User;
   meta?: {
     title?: string | null;
     description?: string | null;
@@ -216,6 +219,14 @@ export interface Post {
      */
     image?: (number | null) | Media;
   };
+  /**
+   * URL-fragment. Wordt automatisch van de titel gemaakt.
+   */
+  slug: string;
+  /**
+   * Datum die in de listing en sitemap verschijnt. Leeg = "vandaag" bij publish.
+   */
+  publishedAt?: string | null;
   updatedAt: string;
   createdAt: string;
   _status?: ('draft' | 'published') | null;
@@ -461,13 +472,11 @@ export interface MediaSelect<T extends boolean = true> {
  */
 export interface PostsSelect<T extends boolean = true> {
   title?: T;
-  slug?: T;
-  publishedAt?: T;
   excerpt?: T;
   coverImage?: T;
+  content?: T;
   categories?: T;
   author?: T;
-  content?: T;
   meta?:
     | T
     | {
@@ -475,6 +484,8 @@ export interface PostsSelect<T extends boolean = true> {
         description?: T;
         image?: T;
       };
+  slug?: T;
+  publishedAt?: T;
   updatedAt?: T;
   createdAt?: T;
   _status?: T;

@@ -309,20 +309,6 @@
           "notNull": false,
           "autoincrement": false
         },
-        "slug": {
-          "name": "slug",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "published_at": {
-          "name": "published_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
         "excerpt": {
           "name": "excerpt",
           "type": "text",
@@ -337,16 +323,16 @@
           "notNull": false,
           "autoincrement": false
         },
-        "author_id": {
-          "name": "author_id",
-          "type": "integer",
+        "content": {
+          "name": "content",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
-        "content": {
-          "name": "content",
-          "type": "text",
+        "author_id": {
+          "name": "author_id",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -368,6 +354,20 @@
         "meta_image_id": {
           "name": "meta_image_id",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -398,13 +398,6 @@
         }
       },
       "indexes": {
-        "posts_slug_idx": {
-          "name": "posts_slug_idx",
-          "columns": [
-            "slug"
-          ],
-          "isUnique": true
-        },
         "posts_cover_image_idx": {
           "name": "posts_cover_image_idx",
           "columns": [
@@ -425,6 +418,13 @@
             "meta_image_id"
           ],
           "isUnique": false
+        },
+        "posts_slug_idx": {
+          "name": "posts_slug_idx",
+          "columns": [
+            "slug"
+          ],
+          "isUnique": true
         },
         "posts_updated_at_idx": {
           "name": "posts_updated_at_idx",
@@ -618,20 +618,6 @@
           "notNull": false,
           "autoincrement": false
         },
-        "version_slug": {
-          "name": "version_slug",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "version_published_at": {
-          "name": "version_published_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
         "version_excerpt": {
           "name": "version_excerpt",
           "type": "text",
@@ -646,16 +632,16 @@
           "notNull": false,
           "autoincrement": false
         },
-        "version_author_id": {
-          "name": "version_author_id",
-          "type": "integer",
+        "version_content": {
+          "name": "version_content",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
-        "version_content": {
-          "name": "version_content",
-          "type": "text",
+        "version_author_id": {
+          "name": "version_author_id",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -677,6 +663,20 @@
         "version_meta_image_id": {
           "name": "version_meta_image_id",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "version_slug": {
+          "name": "version_slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "version_published_at": {
+          "name": "version_published_at",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -742,13 +742,6 @@
           ],
           "isUnique": false
         },
-        "_posts_v_version_version_slug_idx": {
-          "name": "_posts_v_version_version_slug_idx",
-          "columns": [
-            "version_slug"
-          ],
-          "isUnique": false
-        },
         "_posts_v_version_version_cover_image_idx": {
           "name": "_posts_v_version_version_cover_image_idx",
           "columns": [
@@ -767,6 +760,13 @@
           "name": "_posts_v_version_meta_version_meta_image_idx",
           "columns": [
             "version_meta_image_id"
+          ],
+          "isUnique": false
+        },
+        "_posts_v_version_version_slug_idx": {
+          "name": "_posts_v_version_version_slug_idx",
+          "columns": [
+            "version_slug"
           ],
           "isUnique": false
         },
@@ -1902,6 +1902,6 @@
   "internal": {
     "indexes": {}
   },
-  "id": "31cde3d3-6c98-4809-a6c6-9210aace95ed",
+  "id": "f2ca3abd-c8b4-4ec8-8311-9ec99616b858",
   "prevId": "00000000-0000-0000-0000-000000000000"
 }

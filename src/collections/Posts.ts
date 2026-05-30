@@ -6,32 +6,33 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'https://gerustpunt.nl'
 
 export const Posts: CollectionConfig = {
   slug: 'posts',
+  labels: { singular: 'Post', plural: 'Posts' },
   admin: {
     useAsTitle: 'title',
     defaultColumns: ['title', 'slug', 'publishedAt', 'updatedAt', '_status'],
     group: 'Blog',
-    // Live Preview lets editors see the rendered frontend inside the admin.
+    description:
+      'Blog posts. Drafts autosave; click "Publish" to make them live on gerustpunt.nl.',
     livePreview: {
       url: ({ data }) =>
-        `${FRONTEND_URL}/api/preview?secret=${process.env.PREVIEW_SECRET || ''}&slug=${data?.slug || ''}`,
+        `${FRONTEND_URL}/api/preview?secret=${process.env.PREVIEW_SECRET || ''}&slug=${(data as { slug?: string })?.slug || ''}`,
       breakpoints: [
         { name: 'mobile', label: 'Mobile', width: 375, height: 667 },
         { name: 'tablet', label: 'Tablet', width: 768, height: 1024 },
         { name: 'desktop', label: 'Desktop', width: 1440, height: 900 },
       ],
     },
-    // Plain "Preview" button next to "Save" / "Publish" — opens a new tab.
     preview: (doc) =>
       `${FRONTEND_URL}/api/preview?secret=${process.env.PREVIEW_SECRET || ''}&slug=${(doc as { slug?: string })?.slug || ''}`,
   },
   access: {
-    // Anyone can read published posts; drafts only via the preview token.
     read: ({ req: { user } }) => {
       if (user) return true
-      return {
-        _status: { equals: 'published' },
-      }
+      return { _status: { equals: 'published' } }
     },
+    create: ({ req: { user } }) => !!user,
+    update: ({ req: { user } }) => !!user,
+    delete: ({ req: { user } }) => !!user,
   },
   versions: {
     drafts: {
@@ -41,16 +42,87 @@ export const Posts: CollectionConfig = {
     maxPerDoc: 25,
   },
   hooks: {
+    beforeChange: [
+      ({ data, operation }) => {
+        if (operation === 'create' && !data.publishedAt && data._status === 'published') {
+          data.publishedAt = new Date().toISOString()
+        }
+        return data
+      },
+    ],
     afterChange: [revalidatePost],
     afterDelete: [revalidatePostAfterDelete],
   },
   fields: [
+    // Tabs container — the SEO plugin appends its own "SEO" tab at the end
+    // (because `tabbedUI: true` in payload.config). Sidebar fields stay
+    // outside the tabs.
     {
-      name: 'title',
-      type: 'text',
-      required: true,
-      maxLength: 140,
+      type: 'tabs',
+      tabs: [
+        {
+          label: 'Content',
+          fields: [
+            {
+              name: 'title',
+              type: 'text',
+              required: true,
+              maxLength: 140,
+              admin: {
+                description:
+                  'Main title. Also used as default meta title. Keep under ~60 characters.',
+              },
+            },
+            {
+              name: 'excerpt',
+              type: 'textarea',
+              required: true,
+              maxLength: 220,
+              admin: {
+                description:
+                  'Korte samenvatting (≤ 220 tekens). Gebruikt in listing en als fallback meta description.',
+              },
+            },
+            {
+              name: 'coverImage',
+              type: 'upload',
+              relationTo: 'media',
+              required: true,
+              admin: {
+                description: 'Hero image bovenaan + fallback Open Graph image. ≥ 1600×900.',
+              },
+            },
+            {
+              name: 'content',
+              type: 'richText',
+              required: true,
+              admin: {
+                description:
+                  'De body. Gebruik H2/H3 voor sectie-kopjes — die laat Google soms in rich results zien.',
+              },
+            },
+          ],
+        },
+        {
+          label: 'Classification',
+          fields: [
+            {
+              name: 'categories',
+              type: 'relationship',
+              relationTo: 'categories',
+              hasMany: true,
+            },
+            {
+              name: 'author',
+              type: 'relationship',
+              relationTo: 'users',
+              required: false,
+            },
+          ],
+        },
+      ],
     },
+    // Sidebar fields
     {
       name: 'slug',
       type: 'text',
@@ -63,9 +135,12 @@ export const Posts: CollectionConfig = {
       },
       hooks: {
         beforeValidate: [
-          ({ value, data }) => {
-            if (value) return slugify(value)
-            if (data?.title) return slugify(data.title)
+          ({ value, data, operation }) => {
+            if (typeof value === 'string' && value.length > 0) return slugify(value)
+            if (operation === 'create' || !value) {
+              const source = (data as { title?: string })?.title
+              if (source) return slugify(source)
+            }
             return value
           },
         ],
@@ -74,47 +149,11 @@ export const Posts: CollectionConfig = {
     {
       name: 'publishedAt',
       type: 'date',
-      required: true,
       admin: {
         position: 'sidebar',
         date: { pickerAppearance: 'dayAndTime' },
-        description: 'Wordt gebruikt als datum in de listing en sitemap.',
+        description: 'Datum die in de listing en sitemap verschijnt. Leeg = "vandaag" bij publish.',
       },
-      defaultValue: () => new Date().toISOString(),
-    },
-    {
-      name: 'excerpt',
-      type: 'textarea',
-      required: true,
-      maxLength: 220,
-      admin: {
-        description: 'Korte samenvatting (≤ 220 tekens) voor de listing en social previews.',
-      },
-    },
-    {
-      name: 'coverImage',
-      type: 'upload',
-      relationTo: 'media',
-      required: true,
-    },
-    {
-      name: 'categories',
-      type: 'relationship',
-      relationTo: 'categories',
-      hasMany: true,
-      admin: { position: 'sidebar' },
-    },
-    {
-      name: 'author',
-      type: 'relationship',
-      relationTo: 'users',
-      required: false,
-      admin: { position: 'sidebar' },
-    },
-    {
-      name: 'content',
-      type: 'richText',
-      required: true,
     },
   ],
 }
