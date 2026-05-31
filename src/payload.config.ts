@@ -78,9 +78,25 @@ export default buildConfig({
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   // Frontend lives on gerustpunt.nl and talks to this CMS cross-origin for
-  // preview + revalidation. Localhost is whitelisted for dev.
-  cors: [FRONTEND_URL, 'http://localhost:3000', 'http://127.0.0.1:3000'],
-  csrf: [FRONTEND_URL, 'http://localhost:3000', 'http://127.0.0.1:3000'],
+  // preview + revalidation. The CMS itself must also be in the CSRF list
+  // — the admin-UI posts from cms.gerustpunt.nl to /api/* and Payload
+  // rejects POSTs whose Origin isn't whitelisted.
+  cors: [
+    'https://cms.gerustpunt.nl',
+    FRONTEND_URL,
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001',
+  ],
+  csrf: [
+    'https://cms.gerustpunt.nl',
+    FRONTEND_URL,
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001',
+  ],
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
