@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { sqliteD1Adapter } from '@payloadcms/db-d1-sqlite'
-import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { lexicalEditor, LinkFeature } from '@payloadcms/richtext-lexical'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
 import { CloudflareContext, getCloudflareContext } from '@opennextjs/cloudflare'
@@ -75,7 +75,31 @@ export default buildConfig({
     },
   },
   collections: [Users, Media, Categories, Authors, Posts],
-  editor: lexicalEditor(),
+  editor: lexicalEditor({
+    features: ({ defaultFeatures }) => [
+      // Keep every default feature (headings, lists, bold, etc.) except the
+      // built-in link — we replace it with our own variant that surfaces a
+      // dropdown of the post's own H2/H3 anchors above the URL field, so
+      // editors don't have to remember slug formats.
+      ...defaultFeatures.filter((f) => f.key !== 'link'),
+      LinkFeature({
+        fields: ({ defaultFields }) => [
+          // Inject the anchor picker first so it sits at the top of the
+          // link drawer, above text/linkType/url.
+          {
+            name: 'anchor',
+            type: 'ui',
+            admin: {
+              components: {
+                Field: '/admin/AnchorField#AnchorField',
+              },
+            },
+          },
+          ...defaultFields,
+        ],
+      }),
+    ],
+  }),
   secret: process.env.PAYLOAD_SECRET || '',
   // Frontend lives on gerustpunt.nl and talks to this CMS cross-origin for
   // preview + revalidation. The CMS itself must also be in the CSRF list
